@@ -14,7 +14,7 @@
         yum-config-manager \
             --add-repo \
             https://download.docker.com/linux/centos/docker-ce.repo
-        开启若干其他测试库等 yum-config-manager--disable docker-ce-edge 这样可以禁用
+        开启若干其他测试库等  这样可以禁用yum-config-manager--disable docker-ce-edge
         yum-config-manager --enable docker-ce-edge 
         yum-config-manager --enable docker-ce-test
         
