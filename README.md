@@ -1,14 +1,16 @@
 #### Docker安装及基本操作
-* Docker (CE)小企业或个人
+* Docker (CE)小企业或个人,此处是CE
 * Docker (EE)企业级
+
+* 安装及启动
 >   
     参考官方文档
-    前置
+    前置需要
         yum install -y yum-utils \
           device-mapper-persistent-data \
           lvm2
           
-    配置url
+    配置url,不是必须,多一些镜像应该是.
         yum-config-manager \
             --add-repo \
             https://download.docker.com/linux/centos/docker-ce.repo
@@ -22,11 +24,10 @@
     启动docker(配置文件 /etc/sysconfig/docker)
         systemctl start docker
     
-    开机启动
+    开机启动等
         systemctl enable docker
         systemctl disable docker
         chkconfig docker on
-        禁用upstart
     
     测试(这个命令下载一个测试图像并在容器中运行。容器运行时，会打印一条信息消息并退出。)
         docker run hello-world
@@ -34,7 +35,10 @@
     卸载
         yum remove docker-ce
         rm -rf /var/lib/docker # 删除镜像容器等
-    
+>
+
+* 常用命令
+>   
     docker version # 查看docker的版本号，包括客户端、服务端、依赖的Go等
     
     xx表示不同的命令如，pull、run等。可以查看该命令的帮助，所有参数
@@ -49,7 +53,7 @@
     查看本机的镜像  
     docker images [options] [repository[:tag]]
     
-    运行 image：镜像名字 command:命令 arg:命令的参数
+    运行    image：镜像名字;  command:命令;  arg:命令的参数
     docker run [options] image[:tag][command][arg...]
     docker run -d image 后台运行，并打印出id
     -p 8080:80  进行端口映射，将nginx的80端口映射到主机的8080端口上，也就是别人访问8080，可以访问到自己的80
@@ -58,7 +62,7 @@
     docker ps
     
     查看所有容器
-    docker ps -all
+    docker ps -a
     
     启动一个运行(run)过的容器
     docker start <容器id>
@@ -72,6 +76,8 @@
     停止运行容器 如果只有一个，f就是任意字符
     docker stop f
     
+    删除容器
+    docker rm <容器id> 
     
     制作镜像
     以下就是 打包镜像tomcat和jpress.war
@@ -97,19 +103,35 @@
     docker run -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=123456 -e MYSQL_DATABASE=xxx  images(镜像名)
 >
 
-#### Jenkins 持续集成 
-* 参考官方文档.
+* 使用阿里云的Docker镜像加速器
+>
+    管理控制台 -> 容器镜像服务 -> 镜像加速器 -> 获取到其分配的加速地址
+    修改 /etc/docker/daemon.json 文件,增加如下,没有时创建
+      {
+        "registry-mirrors": ["加速地址"]
+      }
+    
+>
 
+* 共享宿主机目录给容器
+>
+    docker run -d --name=test -v /opt/test:/usr/databases docker-test 
+    test是容器的名字，需唯一；
+    -v表示创建一个数据卷并挂载到容器里，
+    示例表示把宿主机的/opt/test目录挂载到容器的/usr/databases目录下；
+    docker-test是镜像的名字
+>
+
+#### Jenkins 持续集成 
 * 前置
     * JDK8
     * Docker
-* 运行
 * 使用docker下载镜像,并启动运行Jenkins容器
 >
     docker run \
           -u root \
           -d \
-          -p 8081:8080 \
+          -p 8080:8080 \
           -v jenkins-data:/var/jenkins_home \
           -v /var/run/docker.sock:/var/run/docker.sock \
           jenkinsci/blueocean
@@ -124,4 +146,86 @@
 > java -jar jenkins.war --httpPort=8080
 
 * 日志中输出了一串密码 a355a069e1e5410ea5dc0dfa1b21eb50
-* 访问http://106.14.7.29:8081,并输入密码
+* 访问http://106.14.7.29:8080,并输入密码
+* 可选.在 系统管理 -> 全局工具配置 中 设置maven和jdk目录等
+
+* 创建一个基于Jenkins镜像的整合maven/jdk的新镜像
+>   
+    下载maven 它自带了一个oepn_jdk
+    wget http://download.oracle.com/otn-pub/java/jdk/8u152-b16/aa0333dd3019491ca4f6ddbe78cdb6d0/jdk-8u152-linux-x64.tar.gz
+    wget http://mirror.bit.edu.cn/apache/maven/maven-3/3.5.2/binaries/apache-maven-3.5.2-bin.tar.gz
+
+    Dockerfile文件内容
+         #继承自jenkins镜像
+         FROM jenkinsci/blueocean:latest  
+         #维护人员信息
+         MAINTAINER ZX 970389745@qq.com  
+         # 拷贝本地的jdk和maven解压包到镜像的/usr下
+         ADD apache-maven-3.5.2-bin.tar.gz /usr
+         # 下载并解压jdk和maven,使用RUN表示执行当前系统(应该是CentOS)命令
+         RUN cd /usr \
+         tar -zxvf  apache-maven-3.5.2-bin.tar.gz 
+         # 设置环境变量
+         ENV MAVEN_HOME /usr/apache-maven-3.5.2
+         ENV PATH $MAVEN_HOME/bin:$PATH
+         # 开放的端口,如果有多个,用 空格 分割
+         EXPOSE 8080 
+    
+    构建镜像     
+    docker build . -t <仓库/镜像名:tag>
+    例如
+    docker build . -t zzzxxx/jenkins-maven-jdk:1.0
+    
+    运行该镜像,端口映射可自行调整.
+    docker run \
+              -u root \
+              -d \
+              -p 8080:8080 \
+              -p 80:80 \
+              -v jenkins-data:/var/jenkins_home \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              zzzxxx/jenkins-maven-jdk:1.0
+              
+    bug:在RUN的最后一句contOS命令后多加了个\ ,导致后面的ENV没有有效指定.
+    
+    maven构建过慢,自行在setting中增加阿里云镜像
+            <mirror>
+              <id>nexus-aliyun</id>
+              <mirrorOf>*</mirrorOf>
+              <name>Nexus aliyun</name>
+              <url>http://maven.aliyun.com/nexus/content/groups/public</url>
+            </mirror>
+>
+
+* 在docker中jenkins的主目录在/var/jenkins_home文件夹中(可用echo $JENKINS_HOME查看).
+* 其中的工作目录在./workspace中.
+
+* jenkins中,我尝试很多次,都无法在打包完成后使用java -jar命令运行jar.(会将末尾的&省略,无法后台启动).
+    * 可以在shell窗口中,增加如下(BUILD_ID=dontKillMe 是防止jenkins杀死我们的后台进程)
+    >
+        BUILD_ID=dontKillMe
+        java -jar $JENKINS_HOME/workspace/maven测试/target/zx-test.jar &
+    >
+    
+    * 或者使用sh脚本执行(这样可以不用手动停止上一个版本的正在运行的jar)
+        * 写在jenkins要执行的shell窗口中的脚本
+            先停止前一个版本的jar.然后再用最新的jar替换掉之前的jar. 然后运行最新的jar
+        >
+            #!/bin/bash 
+            cd /usr
+            sh stop.sh
+            cp $JENKINS_HOME/workspace/maven测试/target/zx-test.jar /usr
+            echo "开始启动"
+            BUILD_ID=dontKillMe 
+            java -jar /usr/zx-test.jar &
+        >
+        * stop.sh 停止前一个版本的jar(pid=ps -ef xxx这句的意思是,通过若干过滤找到对应jar的pid记录.$1表示输出后的记录的第一个参数)
+        >
+            echo "正在停止之前的jar"
+            pid=`ps -ef | grep zx-test.jar | grep -v grep | awk '{print $1}'`
+            if [ -n "$pid" ]
+            then
+               echo "kill -9 的pid:" $pid
+               kill -9 $pid
+            fi
+        >
