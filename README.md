@@ -37,18 +37,13 @@
         rm -rf /var/lib/docker # 删除镜像容器等
 >
 
-* 常用命令
+* 常用命令(使用容器或镜像id时,无需全部id,只需前几个字符即可)
 >   
-    docker version # 查看docker的版本号，包括客户端、服务端、依赖的Go等
-    
     xx表示不同的命令如，pull、run等。可以查看该命令的帮助，所有参数
     docker xx --help
     
     获取镜像 name：镜像名  [:tag]：版本，默认为最新的（也就是会自己加上一个参数:latest）
     docker pull [options] name[:tag]
-    
-    上面的需要翻墙，下面的是指定 下载地址 。网易蜂巢不错。
-    docker pull hub.c.163.com/public/redis:2.8.4 
     
     查看本机的镜像  
     docker images [options] [repository[:tag]]
@@ -113,6 +108,8 @@
     
 >
 
+* 可在阿里云免费开通 容器镜像服务,创建仓库,将镜像推送过去
+
 * 共享宿主机目录给容器
 >
     docker run -d --name=test -v /opt/test:/usr/databases docker-test 
@@ -170,6 +167,11 @@
          ENV PATH $MAVEN_HOME/bin:$PATH
          # 开放的端口,如果有多个,用 空格 分割
          EXPOSE 8080 
+         EXPOSE 8081
+         EXPOSE 8082 
+         EXPOSE 8083 
+         EXPOSE 8084 
+         EXPOSE 8085 
     
     构建镜像     
     docker build . -t <仓库/镜像名:tag>
@@ -181,7 +183,11 @@
               -u root \
               -d \
               -p 8080:8080 \
-              -p 80:80 \
+              -p 8081:8081 \
+              -p 8082:8082 \
+              -p 8083:8083 \
+              -p 8084:8084 \
+              -p 8085:8085 \
               -v jenkins-data:/var/jenkins_home \
               -v /var/run/docker.sock:/var/run/docker.sock \
               zzzxxx/jenkins-maven-jdk:1.0
