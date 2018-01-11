@@ -229,3 +229,28 @@
                kill -9 $pid
             fi
         >
+
+* jenkins + github配置,实现jenkins能在push到github后,自动进行构建
+    * github个人页面 -> setting -> developer setting -> personal access tokens -> Generate new token
+    >
+        该token就是OAuth2协议中的access_token.第三方应用(jenkinds)可通过该令牌获取你允许它进行的一些权限.
+        选择创建令牌.并勾选 repo 和 admin:repo_hook权限.并自行保存好生成的token.
+        这两个权限主要就是访问你的仓库,并设置你的仓库的监听器(钩子,可以理解为监听器.监听你的push等)
+    >
+    * 在github上选择你要部署的项目 -> setting -> webHooks -> add webHooks
+    >
+        这个钩子,可以配置你要监听的事件.当该事件发生后,会请求你配置的那个url.
+        此处在Payload URL处填写
+            http://<你的jenkins的ip>:<端口号>:/github-webhook/
+        然后使用默认的监听push事件即可.
+    >
+    * 在jenkins中安装GitHub Plugin插件 系统管理-->插件管理-->可选插件->搜索.安装即可
+    * 系统管理->系统设置->GitHub->add Github Server
+    >
+        api url中输入 https://api.github.com
+        然后选择增加 Credentials. 选择类型为Secret text.在secret中输入之前的token即可.
+        然后测试连接.当返回	
+            Credentials verified for user BrightStarry, rate limit: 4997
+        表示成功
+    >
+    * 后续还要安装maven插件. 创建maven项目.选择项目中的pom.xml文件等...不再赘述.需要时自行百度.
